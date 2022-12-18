@@ -64,6 +64,7 @@ protected:
   /// \brief ROS image messages
 protected:
   sensor_msgs::Image image_msg_, depth_msg_;
+  sensor_msgs::Image color_image_msg_;
   sensor_msgs::PointCloud2 pointcloud_msg_;
 };
 }

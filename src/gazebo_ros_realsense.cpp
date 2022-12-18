@@ -70,10 +70,21 @@ void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
   const auto image_pub = camera_publishers.at(camera_id);
 
   // copy data into image
-  this->image_msg_.header.frame_id =
-      this->cameraParamsMap_[camera_id].optical_frame;
-  this->image_msg_.header.stamp.sec = current_time.sec;
-  this->image_msg_.header.stamp.nsec = current_time.nsec;
+  if (camera_id == COLOR_CAMERA_NAME)
+  {
+    // If color, use color image instead so that it doesn't get overwritten by depth image
+    this->color_image_msg_.header.frame_id =
+        this->cameraParamsMap_[camera_id].optical_frame;
+    this->color_image_msg_.header.stamp.sec = current_time.sec;
+    this->color_image_msg_.header.stamp.nsec = current_time.nsec;
+  }
+  else
+  {
+    this->image_msg_.header.frame_id =
+        this->cameraParamsMap_[camera_id].optical_frame;
+    this->image_msg_.header.stamp.sec = current_time.sec;
+    this->image_msg_.header.stamp.nsec = current_time.nsec;
+  }
 
   // set image encoding
   const std::map<std::string, std::string> supported_image_encodings = {
@@ -81,10 +92,21 @@ void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
       {"L_INT8", sensor_msgs::image_encodings::TYPE_8UC1}};
   const auto pixel_format = supported_image_encodings.at(cam->ImageFormat());
 
-  // copy from simulation image to ROS msg
-  fillImage(this->image_msg_, pixel_format, cam->ImageHeight(),
-            cam->ImageWidth(), cam->ImageDepth() * cam->ImageWidth(),
-            reinterpret_cast<const void *>(cam->ImageData()));
+
+  if (camera_id == COLOR_CAMERA_NAME)
+  {
+    // If color, use color image instead so that it doesn't get overwritten by depth image
+    fillImage(this->color_image_msg_, pixel_format, cam->ImageHeight(),
+              cam->ImageWidth(), cam->ImageDepth() * cam->ImageWidth(),
+              reinterpret_cast<const void *>(cam->ImageData()));
+  }
+  else
+  {
+    // copy from simulation image to ROS msg
+    fillImage(this->image_msg_, pixel_format, cam->ImageHeight(),
+              cam->ImageWidth(), cam->ImageDepth() * cam->ImageWidth(),
+              reinterpret_cast<const void *>(cam->ImageData()));
+  }
 
   // identify camera rendering
   const std::map<std::string, rendering::CameraPtr> cameras = {
@@ -94,9 +116,19 @@ void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
   };
 
   // publish to ROS
-  auto camera_info_msg =
-      cameraInfo(this->image_msg_, cameras.at(camera_id)->HFOV().Radian());
-  image_pub->publish(this->image_msg_, camera_info_msg);
+  if (camera_id == COLOR_CAMERA_NAME)
+  {
+    // If color, use color image instead so that it doesn't get overwritten by depth image
+    auto camera_info_msg =
+        cameraInfo(this->color_image_msg_, cameras.at(camera_id)->HFOV().Radian());
+    image_pub->publish(this->color_image_msg_, camera_info_msg);
+  }
+  else
+  {
+    auto camera_info_msg =
+        cameraInfo(this->image_msg_, cameras.at(camera_id)->HFOV().Radian());
+    image_pub->publish(this->image_msg_, camera_info_msg);
+  }
 }
 
 // Referenced from gazebo_plugins
@@ -159,15 +191,15 @@ bool GazeboRosRealsense::FillPointCloudHelper(sensor_msgs::PointCloud2 &point_cl
       }
 
       // put image color data for each point
-      uint8_t *image_src = (uint8_t *)(&(this->image_msg_.data[0]));
-      if (this->image_msg_.data.size() == rows_arg * cols_arg * 3)
+      uint8_t *image_src = (uint8_t *)(&(this->color_image_msg_.data[0]));
+      if (this->color_image_msg_.data.size() == rows_arg * cols_arg * 3)
       {
         // color
-        iter_rgb[0] = image_src[i * 3 + j * cols_arg * 3 + 0];
+        iter_rgb[2] = image_src[i * 3 + j * cols_arg * 3 + 0];
         iter_rgb[1] = image_src[i * 3 + j * cols_arg * 3 + 1];
-        iter_rgb[2] = image_src[i * 3 + j * cols_arg * 3 + 2];
+        iter_rgb[0] = image_src[i * 3 + j * cols_arg * 3 + 2];
       }
-      else if (this->image_msg_.data.size() == rows_arg * cols_arg)
+      else if (this->color_image_msg_.data.size() == rows_arg * cols_arg)
       {
         // mono (or bayer?  @todo; fix for bayer)
         iter_rgb[0] = image_src[i + j * cols_arg];
