@@ -3,7 +3,7 @@
   <name>realsense_gazebo_plugin</name>
   <version>0.1.0</version>
   <description>Intel RealSense D435 Gazebo plugin package</description>
-  
+
   <maintainer email="sergey.dorodnicov@intel.com">Sergey Dorodnicov</maintainer>
   <maintainer email="doron.hirshberg@intel.com">Doron Hirshberg</maintainer>
   <maintainer email="missrisalaheddine@gmail.com">Salah-Eddine Missri</maintainer>
@@ -26,10 +26,6 @@
   <depend>camera_info_manager</depend>
 
   <export>
-    <gazebo_ros
-      plugin_path="${prefix}/lib"
-      gazebo_media_path="${prefix}"
-      gazebo_model_path="${prefix}/models"
-      />
+    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" gazebo_model_path="${prefix}/models" />
   </export>
 </package>
